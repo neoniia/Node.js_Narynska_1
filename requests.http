@@ -1,0 +1,360 @@
+@baseUrl = http://localhost:3000
+@missingId = 00000000-0000-4000-8000-000000000000
+
+### Create film
+# @name createFilm
+POST {{baseUrl}}/films
+Content-Type: application/json
+
+{
+  "title": "Dune",
+  "durationMinutes": 155,
+  "releaseYear": 2021
+}
+
+###
+@filmId = {{createFilm.response.body.id}}
+
+### List films
+GET {{baseUrl}}/films
+
+### Get film by id
+GET {{baseUrl}}/films/{{filmId}}
+
+### Update film
+PATCH {{baseUrl}}/films/{{filmId}}
+Content-Type: application/json
+
+{
+  "title": "Dune: Part One"
+}
+
+### Create hall
+# @name createHall
+POST {{baseUrl}}/halls
+Content-Type: application/json
+
+{
+  "name": "Blue Hall",
+  "rows": 3,
+  "seatsPerRow": 5
+}
+
+###
+@hallId = {{createHall.response.body.id}}
+
+### List halls
+GET {{baseUrl}}/halls
+
+### Get hall with generated seats
+GET {{baseUrl}}/halls/{{hallId}}
+
+### Create showing
+# @name createShowing
+POST {{baseUrl}}/showings
+Content-Type: application/json
+
+{
+  "filmId": "{{filmId}}",
+  "hallId": "{{hallId}}",
+  "startsAt": "2099-12-01T18:00:00.000Z",
+  "price": 12500
+}
+
+###
+@showingId = {{createShowing.response.body.id}}
+
+### List showings
+GET {{baseUrl}}/showings
+
+### List showings filtered by film and date
+GET {{baseUrl}}/showings?filmId={{filmId}}&date=2099-12-01
+
+### Get showing by id
+GET {{baseUrl}}/showings/{{showingId}}
+
+### Get showing seats
+GET {{baseUrl}}/showings/{{showingId}}/seats
+
+### List all bookings (empty before the first booking)
+GET {{baseUrl}}/bookings
+
+### Book seats
+# @name createBooking
+POST {{baseUrl}}/showings/{{showingId}}/bookings
+Content-Type: application/json
+
+{
+  "seats": [
+    { "row": 1, "seat": 1 },
+    { "row": 1, "seat": 2 }
+  ]
+}
+
+###
+@bookingId = {{createBooking.response.body.id}}
+
+### List bookings of the showing
+GET {{baseUrl}}/showings/{{showingId}}/bookings
+
+### List all bookings
+GET {{baseUrl}}/bookings
+
+### Showing seats after booking
+GET {{baseUrl}}/showings/{{showingId}}/seats
+
+### Cancel booking
+DELETE {{baseUrl}}/bookings/{{bookingId}}
+
+###
+# --- Errors named in the assignment ---
+
+### Create film: missing fields -> 400
+POST {{baseUrl}}/films
+Content-Type: application/json
+
+{}
+
+### Create film: invalid field type -> 400
+POST {{baseUrl}}/films
+Content-Type: application/json
+
+{
+  "title": "Dune",
+  "durationMinutes": "long",
+  "releaseYear": 2021
+}
+
+### Get missing film -> 404
+GET {{baseUrl}}/films/{{missingId}}
+
+### Update missing film -> 404
+PATCH {{baseUrl}}/films/{{missingId}}
+Content-Type: application/json
+
+{
+  "title": "Unknown"
+}
+
+### Update film: invalid field type -> 400
+PATCH {{baseUrl}}/films/{{filmId}}
+Content-Type: application/json
+
+{
+  "durationMinutes": "abc"
+}
+
+### Delete missing film -> 404
+DELETE {{baseUrl}}/films/{{missingId}}
+
+### Delete film referenced by a showing -> 409
+DELETE {{baseUrl}}/films/{{filmId}}
+
+### Create hall: missing fields -> 400
+POST {{baseUrl}}/halls
+Content-Type: application/json
+
+{}
+
+### Create hall: non-positive integer -> 400
+POST {{baseUrl}}/halls
+Content-Type: application/json
+
+{
+  "name": "Red Hall",
+  "rows": 0,
+  "seatsPerRow": 5
+}
+
+### Create hall: invalid type -> 400
+POST {{baseUrl}}/halls
+Content-Type: application/json
+
+{
+  "name": "Red Hall",
+  "rows": 3.5,
+  "seatsPerRow": 5
+}
+
+### Create hall: duplicate name -> 409
+POST {{baseUrl}}/halls
+Content-Type: application/json
+
+{
+  "name": "Blue Hall",
+  "rows": 2,
+  "seatsPerRow": 2
+}
+
+### Get missing hall -> 404
+GET {{baseUrl}}/halls/{{missingId}}
+
+### Delete missing hall -> 404
+DELETE {{baseUrl}}/halls/{{missingId}}
+
+### Delete hall referenced by a showing -> 409
+DELETE {{baseUrl}}/halls/{{hallId}}
+
+### Create showing: film not found -> 400
+POST {{baseUrl}}/showings
+Content-Type: application/json
+
+{
+  "filmId": "{{missingId}}",
+  "hallId": "{{hallId}}",
+  "startsAt": "2099-12-01T18:00:00.000Z",
+  "price": 12500
+}
+
+### Create showing: hall not found -> 400
+POST {{baseUrl}}/showings
+Content-Type: application/json
+
+{
+  "filmId": "{{filmId}}",
+  "hallId": "{{missingId}}",
+  "startsAt": "2099-12-01T18:00:00.000Z",
+  "price": 12500
+}
+
+### Create showing: invalid ISO 8601 startsAt -> 400
+POST {{baseUrl}}/showings
+Content-Type: application/json
+
+{
+  "filmId": "{{filmId}}",
+  "hallId": "{{hallId}}",
+  "startsAt": "not-a-date",
+  "price": 12500
+}
+
+### Create showing: startsAt in the past -> 400
+POST {{baseUrl}}/showings
+Content-Type: application/json
+
+{
+  "filmId": "{{filmId}}",
+  "hallId": "{{hallId}}",
+  "startsAt": "2020-01-01T10:00:00.000Z",
+  "price": 12500
+}
+
+### Create showing: price is not a positive integer -> 400
+POST {{baseUrl}}/showings
+Content-Type: application/json
+
+{
+  "filmId": "{{filmId}}",
+  "hallId": "{{hallId}}",
+  "startsAt": "2099-12-01T18:00:00.000Z",
+  "price": -100
+}
+
+### List showings: invalid date format -> 400
+GET {{baseUrl}}/showings?date=01-12-2099
+
+### Get missing showing -> 404
+GET {{baseUrl}}/showings/{{missingId}}
+
+### Get seats of missing showing -> 404
+GET {{baseUrl}}/showings/{{missingId}}/seats
+
+### Book seats: showing not found -> 404
+POST {{baseUrl}}/showings/{{missingId}}/bookings
+Content-Type: application/json
+
+{
+  "seats": [{ "row": 1, "seat": 1 }]
+}
+
+### Book seats: empty array -> 400
+POST {{baseUrl}}/showings/{{showingId}}/bookings
+Content-Type: application/json
+
+{
+  "seats": []
+}
+
+### Book seats: missing row/seat -> 400
+POST {{baseUrl}}/showings/{{showingId}}/bookings
+Content-Type: application/json
+
+{
+  "seats": [{ "row": 1 }]
+}
+
+### Book seats: duplicate place in the request -> 400
+POST {{baseUrl}}/showings/{{showingId}}/bookings
+Content-Type: application/json
+
+{
+  "seats": [
+    { "row": 1, "seat": 1 },
+    { "row": 1, "seat": 1 }
+  ]
+}
+
+### Book seats: seat outside the hall -> 400
+POST {{baseUrl}}/showings/{{showingId}}/bookings
+Content-Type: application/json
+
+{
+  "seats": [{ "row": 9, "seat": 9 }]
+}
+
+### Book seats again for conflict setup
+# @name conflictBooking
+POST {{baseUrl}}/showings/{{showingId}}/bookings
+Content-Type: application/json
+
+{
+  "seats": [{ "row": 2, "seat": 1 }]
+}
+
+### Book already taken seat -> 409
+POST {{baseUrl}}/showings/{{showingId}}/bookings
+Content-Type: application/json
+
+{
+  "seats": [
+    { "row": 2, "seat": 1 },
+    { "row": 2, "seat": 2 }
+  ]
+}
+
+### List bookings of missing showing -> 404
+GET {{baseUrl}}/showings/{{missingId}}/bookings
+
+### Cancel missing booking -> 404
+DELETE {{baseUrl}}/bookings/{{missingId}}
+
+###
+# --- Successful deletes of records without dependents ---
+
+### Create a film without showings
+# @name spareFilm
+POST {{baseUrl}}/films
+Content-Type: application/json
+
+{
+  "title": "Spare Film",
+  "durationMinutes": 90,
+  "releaseYear": 1999
+}
+
+### Delete film without showings -> 204
+DELETE {{baseUrl}}/films/{{spareFilm.response.body.id}}
+
+### Create a hall without showings
+# @name spareHall
+POST {{baseUrl}}/halls
+Content-Type: application/json
+
+{
+  "name": "Spare Hall",
+  "rows": 2,
+  "seatsPerRow": 2
+}
+
+### Delete hall without showings -> 204
+DELETE {{baseUrl}}/halls/{{spareHall.response.body.id}}
